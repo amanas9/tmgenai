@@ -3,6 +3,8 @@ package com.genai.tmgenai.controller;
 import com.genai.tmgenai.dto.FileServiceResponse;
 import com.genai.tmgenai.dto.Question;
 import com.genai.tmgenai.service.ChatDocumentService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -36,6 +38,12 @@ public class ChatWithDocumentController {
     @PostMapping("chat")
     public ResponseEntity<Object> chat(@RequestBody Question question) throws URISyntaxException, IOException {
         return ResponseEntity.ok(chatDocumentService.chat(question));
+    }
+
+
+    @PostMapping(value = "streamingChat",produces = "text/plain")
+    public ResponseEntity<Object> streamingChat(HttpServletResponse response, HttpServletRequest request, @RequestBody Question question) throws URISyntaxException, IOException {
+        return ResponseEntity.ok(chatDocumentService.chat(question,response,request));
     }
 
 
