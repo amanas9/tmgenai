@@ -1,9 +1,11 @@
 package com.genai.tmgenai.service;
 
+import com.genai.tmgenai.PineConeEmbeddingstoreCustomImpl;
 import com.genai.tmgenai.dto.Answer;
 import com.genai.tmgenai.dto.FileResponseMeta;
 import com.genai.tmgenai.dto.FileServiceResponse;
 import com.genai.tmgenai.dto.Question;
+import com.google.protobuf.Struct;
 import dev.langchain4j.data.document.DocumentSegment;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.message.AiMessage;
@@ -32,6 +34,7 @@ import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static dev.langchain4j.model.openai.OpenAiModelName.GPT_3_5_TURBO;
 import static dev.langchain4j.model.openai.OpenAiModelName.TEXT_EMBEDDING_ADA_002;
@@ -56,7 +59,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
     @Override
     public void embedFile(MultipartFile file,String fileId) throws URISyntaxException, IOException {
 
-            fileEmbeddingService.embedFile(file, "HDFC_FILE");
+            fileEmbeddingService.embedFile(file, fileId);
 
 
     }
@@ -81,7 +84,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
 //        ).getBody();
         FileServiceResponse fileServiceResponse =  new FileServiceResponse();
         FileResponseMeta meta = new FileResponseMeta();
-        meta.setFileId("HDFC_FILE");
+        meta.setFileId(UUID.randomUUID().toString());
         fileServiceResponse.setFileResponseMeta(meta);
         return fileServiceResponse;
     }
@@ -95,12 +98,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
                 .timeout(ofSeconds(15))
                 .build();
 
-        PineconeEmbeddingStore pinecone = PineconeEmbeddingStore.builder()
-                .apiKey("1d0899b3-7abf-40be-a267-ac208d572ed3") // https://app.pinecone.io/organizations/xxx/projects/yyy:zzz/keys
-                .environment("asia-southeast1-gcp-free")
-                .projectName("bca6a53")
-                .index("documents") // make sure the dimensions of the Pinecone index match the dimensions of the embedding model (1536 for text-embedding-ada-002)
-                .build();
+        PineConeEmbeddingstoreCustomImpl pinecone = new PineConeEmbeddingstoreCustomImpl("1d0899b3-7abf-40be-a267-ac208d572ed3", "asia-southeast1-gcp-free", "bca6a53", "documents", "default");
 
 
 
@@ -109,12 +107,15 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
         Embedding questionEmbedding = embeddingModel.embed(questionString).get();
 
 
+        Struct filter = Struct.newBuilder().putFields("file_id", com.google.protobuf.Value.newBuilder().setStringValue(question.getFileId()).build()).build();
+
+
 
         // Find relevant embeddings in embedding store by semantic similarity
 
-        List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 5);
+        List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 5,filter);
 
-
+        System.out.println("relevantEmbeddings : " + relevantEmbeddings);
 
 
         // Create a prompt for the model that includes question and relevant embeddings

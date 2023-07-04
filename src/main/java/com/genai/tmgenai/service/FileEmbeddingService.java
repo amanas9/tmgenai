@@ -1,5 +1,6 @@
 package com.genai.tmgenai.service;
 
+import com.genai.tmgenai.PineConeEmbeddingstoreCustomImpl;
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentLoader;
 import dev.langchain4j.data.document.DocumentSegment;
@@ -9,6 +10,7 @@ import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
 import dev.langchain4j.store.embedding.PineconeEmbeddingStore;
+import dev.langchain4j.store.embedding.PineconeEmbeddingStoreImpl;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -40,6 +42,9 @@ public class FileEmbeddingService {
 
         DocumentSplitter splitter = new SentenceSplitter();
        List<DocumentSegment> documentSegments = splitter.split(document);
+       documentSegments.forEach(documentSegment -> {
+           documentSegment.metadata().add("file_id",fileId);
+       });
 
 
 
@@ -53,18 +58,14 @@ public class FileEmbeddingService {
 
         List<Embedding> embeddings = embeddingModel.embedAll(documentSegments).get();
 
-
-
         // Store embeddings into embedding store for further search / retrieval
 
-        PineconeEmbeddingStore pinecone = PineconeEmbeddingStore.builder()
-                .apiKey("1d0899b3-7abf-40be-a267-ac208d572ed3") // https://app.pinecone.io/organizations/xxx/projects/yyy:zzz/keys
-                .environment("asia-southeast1-gcp-free")
-                .projectName("bca6a53")
-                .index("documents") // make sure the dimensions of the Pinecone index match the dimensions of the embedding model (1536 for text-embedding-ada-002)
-                .build();
+        PineConeEmbeddingstoreCustomImpl pinecone = new PineConeEmbeddingstoreCustomImpl("1d0899b3-7abf-40be-a267-ac208d572ed3", "asia-southeast1-gcp-free", "bca6a53", "documents", "default");
+
 //
-        pinecone.addAll(embeddings, documentSegments);
+        List<String> addeds= pinecone.addAll(embeddings, documentSegments);
+
+        System.out.println(addeds);
 
     }
 }
