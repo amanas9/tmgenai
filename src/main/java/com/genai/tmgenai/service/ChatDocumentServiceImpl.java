@@ -113,7 +113,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
 
         // Find relevant embeddings in embedding store by semantic similarity
 
-        List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 5,filter);
+        List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 2,filter);
 
         System.out.println("relevantEmbeddings : " + relevantEmbeddings);
 
@@ -162,6 +162,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
         Answer answer1 = new Answer();
        answer1.setAnswer(aiMessage.text());
         answer1.setQuestion(question);
+
         return answer1;
     }
 

@@ -5,6 +5,7 @@ import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentLoader;
 import dev.langchain4j.data.document.DocumentSegment;
 import dev.langchain4j.data.document.DocumentSplitter;
+import dev.langchain4j.data.document.splitter.CharacterSplitter;
 import dev.langchain4j.data.document.splitter.SentenceSplitter;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.model.embedding.EmbeddingModel;
@@ -36,11 +37,14 @@ public class FileEmbeddingService {
         multipartFile.transferTo(file);
         DocumentLoader documentLoader = DocumentLoader.from(Paths.get(file.getPath()), PDF);
         Document document = documentLoader.load();
+        document.text();
+
+
 
 
         // Split document into segments (one paragraph per segment)
 
-        DocumentSplitter splitter = new SentenceSplitter();
+        DocumentSplitter splitter = new CharacterSplitter(1500,15);
        List<DocumentSegment> documentSegments = splitter.split(document);
        documentSegments.forEach(documentSegment -> {
            documentSegment.metadata().add("file_id",fileId);
