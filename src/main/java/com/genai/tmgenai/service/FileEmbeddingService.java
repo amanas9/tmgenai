@@ -48,7 +48,7 @@ public class FileEmbeddingService {
 
     private PineConeEmbeddingstoreCustomImpl pinecone = new PineConeEmbeddingstoreCustomImpl("1d0899b3-7abf-40be-a267-ac208d572ed3", "asia-southeast1-gcp-free", "bca6a53", "documents", "default");
 
-    public void embedFile(MultipartFile multipartFile,String fileId) throws IOException {
+    public String embedFile(MultipartFile multipartFile,String fileId) throws IOException {
 
         File file = new File("/Users/amankumar/Downloads"  + fileId + ".pdf");
         multipartFile.transferTo(file);
@@ -82,9 +82,10 @@ public class FileEmbeddingService {
 
         List<String> addeds= pinecone.addAll(embeddings, documentSegments);
 
-        String summary = getInitialSummary(fileId);
+
         System.out.println(fileId);
-        log.info("summary : {}",summary);
+
+        return getInitialSummary(fileId);
 
 
 
@@ -132,6 +133,12 @@ public class FileEmbeddingService {
         AiMessage aiMessage = chatModel.sendUserMessage(prompt).get();
 
         System.out.println(aiMessage.text());
+        if(aiMessage.text()!=null){
+            DocumentSegment documentSegment = DocumentSegment.from(aiMessage.text());
+            documentSegment.metadata().add("file_id", fileId);
+            Embedding embedding = embeddingModel.embed(documentSegment).get();
+            pinecone.add(embedding, documentSegment);
+        }
         return aiMessage.text();
     }
 

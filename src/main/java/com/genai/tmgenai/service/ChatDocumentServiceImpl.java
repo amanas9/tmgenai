@@ -36,8 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static dev.langchain4j.model.openai.OpenAiModelName.GPT_3_5_TURBO;
-import static dev.langchain4j.model.openai.OpenAiModelName.TEXT_EMBEDDING_ADA_002;
+import static dev.langchain4j.model.openai.OpenAiModelName.*;
 import static java.time.Duration.ofSeconds;
 import static java.util.stream.Collectors.joining;
 
@@ -57,9 +56,10 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
         this.fileEmbeddingService = fileEmbeddingService;
     }
     @Override
-    public void embedFile(MultipartFile file,String fileId) throws URISyntaxException, IOException {
+    public String embedFile(MultipartFile file,String fileId) throws URISyntaxException, IOException {
 
-            fileEmbeddingService.embedFile(file, fileId);
+            String summary = fileEmbeddingService.embedFile(file, fileId);
+            return summary;
 
 
     }
@@ -113,7 +113,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
 
         // Find relevant embeddings in embedding store by semantic similarity
 
-        List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 2,filter);
+        List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 10,filter);
 
         System.out.println("relevantEmbeddings : " + relevantEmbeddings);
 
@@ -121,7 +121,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
         // Create a prompt for the model that includes question and relevant embeddings
 
         PromptTemplate promptTemplate = PromptTemplate.from(
-                "Answer the following question to the best of your ability :\n"
+                "Answer the following question to the best of your ability:\n"
                         + "\n"
                         + "Question:\n"
                         + "{{questionString}}\n"
@@ -149,7 +149,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
         ChatLanguageModel chatModel = OpenAiChatModel.builder()
                 .apiKey(OPENAI_API_KEY) // https://platform.openai.com/account/api-keys
                 .modelName(GPT_3_5_TURBO)
-                .temperature(1.0)
+                .temperature(0.4)
                 .logResponses(true)
                 .logRequests(true)
                 .build();

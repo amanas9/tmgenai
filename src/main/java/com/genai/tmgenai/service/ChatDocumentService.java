@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 
 public interface ChatDocumentService {
-    public void embedFile(MultipartFile file,String fileId) throws URISyntaxException, IOException;
+    public String embedFile(MultipartFile file,String fileId) throws URISyntaxException, IOException;
 
     public FileServiceResponse uploadFile(MultipartFile file) throws URISyntaxException;
 

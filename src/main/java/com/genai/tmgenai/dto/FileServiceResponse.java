@@ -7,5 +7,6 @@ import lombok.Data;
 public class FileServiceResponse {
     @JsonProperty("processInfo")
     private FileResponseMeta fileResponseMeta;
+    private String summary;
 }
 

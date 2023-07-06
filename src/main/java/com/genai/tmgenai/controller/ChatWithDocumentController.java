@@ -29,7 +29,8 @@ public class ChatWithDocumentController {
             return ResponseEntity.internalServerError().body("Error in uploading file");
         }
       //analyze file
-      chatDocumentService.embedFile(file,fileServiceResponse.getFileResponseMeta().getFileId());
+      String summary = chatDocumentService.embedFile(file,fileServiceResponse.getFileResponseMeta().getFileId());
+        fileServiceResponse.setSummary(summary);
       return ResponseEntity.ok(fileServiceResponse);
     }
 
