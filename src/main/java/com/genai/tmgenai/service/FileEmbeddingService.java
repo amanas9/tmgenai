@@ -32,7 +32,7 @@ public class FileEmbeddingService {
 
     public void embedFile(MultipartFile multipartFile,String fileId) throws IOException {
 
-        File file = new File("/Users/amankumar/Downloads"  + fileId + ".pdf");
+        File file = new File("/Users/ankush/Downloads"  + fileId + ".pdf");
         multipartFile.transferTo(file);
         DocumentLoader documentLoader = DocumentLoader.from(Paths.get(file.getPath()), PDF);
         Document document = documentLoader.load();
