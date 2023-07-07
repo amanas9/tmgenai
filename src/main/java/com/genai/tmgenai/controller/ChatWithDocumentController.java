@@ -1,15 +1,21 @@
 package com.genai.tmgenai.controller;
 
+import com.genai.tmgenai.common.models.ChatHistory;
+import com.genai.tmgenai.common.models.UserEnum;
+import com.genai.tmgenai.dto.ChatHistoryResponse;
 import com.genai.tmgenai.dto.FileServiceResponse;
 import com.genai.tmgenai.dto.Question;
 import com.genai.tmgenai.service.ChatDocumentService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @RestController()
 @RequestMapping("api/v1/")
@@ -39,9 +45,8 @@ public class ChatWithDocumentController {
         return ResponseEntity.ok(chatDocumentService.chat(question));
     }
 
-
-
-
-
-
+    @GetMapping("/data")
+    public ResponseEntity<List<ChatHistoryResponse>> getData(@RequestParam("fileIds") String fileId) {
+        return ResponseEntity.ok(chatDocumentService.getData(fileId));
+    }
 }

@@ -65,8 +65,11 @@ public class FileEmbeddingService {
 
     public String embedFile(MultipartFile multipartFile,String fileId) throws IOException {
 
+
+
         log.info("splitting");
         File file = new File("/Users/amankumar/Downloads"  + fileId + ".pdf");
+
         multipartFile.transferTo(file);
 
         DocumentLoader documentLoader = DocumentLoader.from(Paths.get(file.getPath()), PDF);

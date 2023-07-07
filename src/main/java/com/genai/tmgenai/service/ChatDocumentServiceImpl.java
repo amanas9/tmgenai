@@ -1,10 +1,10 @@
 package com.genai.tmgenai.service;
 
 import com.genai.tmgenai.PineConeEmbeddingstoreCustomImpl;
-import com.genai.tmgenai.dto.Answer;
-import com.genai.tmgenai.dto.FileResponseMeta;
-import com.genai.tmgenai.dto.FileServiceResponse;
-import com.genai.tmgenai.dto.Question;
+import com.genai.tmgenai.common.models.ChatHistory;
+import com.genai.tmgenai.common.models.UserEnum;
+import com.genai.tmgenai.common.repositories.ChatHistoryRepository;
+import com.genai.tmgenai.dto.*;
 import com.google.protobuf.Struct;
 import dev.langchain4j.chain.ConversationalChain;
 import dev.langchain4j.data.document.DocumentSegment;
@@ -17,25 +17,18 @@ import dev.langchain4j.model.input.PromptTemplate;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
-import dev.langchain4j.store.embedding.PineconeEmbeddingStore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.time.LocalDateTime;
+import java.util.*;
 
 import static dev.langchain4j.model.openai.OpenAiModelName.*;
 import static java.time.Duration.ofSeconds;
@@ -47,6 +40,9 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
 
     private final RestService restService;
     private final FileEmbeddingService fileEmbeddingService;
+
+    @Autowired
+    private ChatHistoryRepository chatHistoryRepository;
 
     @Value("${key.opnenapikey}")
     private String OPENAI_API_KEY;
@@ -95,6 +91,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
 
     @Override
     public Answer chat(Question question) throws URISyntaxException, IOException {
+        setQuestionInDB(question, UserEnum.Customer);
 
         EmbeddingModel embeddingModel = OpenAiEmbeddingModel.builder()
                 .apiKey(OPENAI_API_KEY) // https://platform.openai.com/account/api-keys
@@ -154,10 +151,51 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
         // See an answer from the model
 
         Answer answer1 = new Answer();
-       answer1.setAnswer(aiMessage.text());
+        answer1.setAnswer(aiMessage.text());
         answer1.setQuestion(question);
-
+        setAnswerInDB(answer1,UserEnum.BOT);
         return answer1;
+    }
+
+    @Override
+    public void setQuestionInDB(Question question, UserEnum userEnum) {
+        ChatHistory chatHistory = new ChatHistory();
+        chatHistory.setCreatedAt(LocalDateTime.now());
+        chatHistory.setContent(question.getQuestion());
+        chatHistory.setFileId(question.getFileId());
+        chatHistory.setUserType(userEnum);
+        chatHistoryRepository.save(chatHistory);
+    }
+
+    @Override
+    public void setAnswerInDB(Answer answer, UserEnum userEnum) {
+        ChatHistory chatHistory = new ChatHistory();
+        chatHistory.setCreatedAt(LocalDateTime.now());
+        chatHistory.setContent(answer.getAnswer());
+        chatHistory.setFileId(answer.getQuestion().getFileId());
+        chatHistory.setUserType(userEnum);
+        chatHistoryRepository.save(chatHistory);
+    }
+
+    @Override
+    public List<ChatHistoryResponse> getData(String fileId) {
+        Sort sortByCreatedAt = Sort.by("createdAt").ascending();
+        List<ChatHistory> data = chatHistoryRepository.findByFileId(fileId,sortByCreatedAt);
+        List<ChatHistoryResponse> responseData = getChatHistory(data);
+        return responseData;
+    }
+
+    private List<ChatHistoryResponse> getChatHistory(List<ChatHistory> data) {
+        List<ChatHistoryResponse> chatHistoryList = new ArrayList<>();
+        for (ChatHistory chatHistory : data){
+            ChatHistoryResponse response = new ChatHistoryResponse();
+            response.setContent(chatHistory.getContent());
+            response.setDateTime(chatHistory.getCreatedAt());
+            response.setFileId(chatHistory.getFileId());
+            response.setUserType(chatHistory.getUserType());
+            chatHistoryList.add(response);
+        }
+        return chatHistoryList;
     }
 
 }
