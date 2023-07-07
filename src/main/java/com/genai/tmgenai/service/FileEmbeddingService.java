@@ -4,6 +4,7 @@ import com.genai.tmgenai.PineConeEmbeddingstoreCustomImpl;
 import com.genai.tmgenai.PromptConstants;
 import com.genai.tmgenai.dto.Question;
 import com.google.protobuf.Struct;
+import dev.langchain4j.chain.ConversationalChain;
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentLoader;
 import dev.langchain4j.data.document.DocumentSegment;
@@ -12,6 +13,7 @@ import dev.langchain4j.data.document.splitter.CharacterSplitter;
 import dev.langchain4j.data.document.splitter.SentenceSplitter;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.input.Prompt;
@@ -22,6 +24,7 @@ import dev.langchain4j.store.embedding.EmbeddingMatch;
 import dev.langchain4j.store.embedding.PineconeEmbeddingStore;
 import dev.langchain4j.store.embedding.PineconeEmbeddingStoreImpl;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -46,6 +49,9 @@ public class FileEmbeddingService {
     @Value("${key.opnenapikey}")
     private String OPENAI_API_KEY;
 
+    @Autowired
+    private ConversationalChain conversationalChain;
+
     private PineConeEmbeddingstoreCustomImpl pinecone = new PineConeEmbeddingstoreCustomImpl("1d0899b3-7abf-40be-a267-ac208d572ed3", "asia-southeast1-gcp-free", "bca6a53", "documents", "default");
 
     public String embedFile(MultipartFile multipartFile,String fileId) throws IOException {
@@ -55,10 +61,6 @@ public class FileEmbeddingService {
         DocumentLoader documentLoader = DocumentLoader.from(Paths.get(file.getPath()), PDF);
         Document document = documentLoader.load();
         document.text();
-
-
-
-
 
 
         // Split document into segments (one paragraph per segment)
@@ -103,7 +105,7 @@ public class FileEmbeddingService {
         Struct filter = Struct.newBuilder().putFields("file_id", com.google.protobuf.Value.newBuilder().setStringValue(fileId).build()).build();
 
         // Find relevant embeddings in embedding store by semantic similarity
-        List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = pinecone.findRelevant(questionEmbedding,10,filter);
+        List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = pinecone.findRelevant(questionEmbedding,6,filter);
 
         String information = relevantEmbeddings.stream()
                 .map(match -> match.embedded().get().text())
@@ -122,15 +124,19 @@ public class FileEmbeddingService {
 
         Prompt prompt = promptTemplate.apply(variables);
 
-        ChatLanguageModel chatModel = OpenAiChatModel.builder()
-                .apiKey(OPENAI_API_KEY) // https://platform.openai.com/account/api-keys
-                .modelName(GPT_3_5_TURBO)
-                .temperature(0.5)
-                .logResponses(true)
-                .logRequests(true)
-                .build();
+//        ChatLanguageModel chatModel = OpenAiChatModel.builder()
+//                .apiKey(OPENAI_API_KEY) // https://platform.openai.com/account/api-keys
+//                .modelName(GPT_3_5_TURBO)
+//                .temperature(0.5)
+//                .logResponses(true)
+//                .logRequests(true)
+//                .build();
 
-        AiMessage aiMessage = chatModel.sendUserMessage(prompt).get();
+
+
+        AiMessage aiMessage = AiMessage.from(conversationalChain.execute(prompt.text()));
+
+      //  AiMessage aiMessage = chatModel.sendUserMessage(prompt).get();
 
         System.out.println(aiMessage.text());
         if(aiMessage.text()!=null){

@@ -6,6 +6,7 @@ import com.genai.tmgenai.dto.FileResponseMeta;
 import com.genai.tmgenai.dto.FileServiceResponse;
 import com.genai.tmgenai.dto.Question;
 import com.google.protobuf.Struct;
+import dev.langchain4j.chain.ConversationalChain;
 import dev.langchain4j.data.document.DocumentSegment;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.message.AiMessage;
@@ -49,6 +50,9 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
 
     @Value("${key.opnenapikey}")
     private String OPENAI_API_KEY;
+
+    @Autowired
+    private ConversationalChain conversationalChain;
 
     @Autowired
     public ChatDocumentServiceImpl(RestService restService, FileEmbeddingService fileEmbeddingService) {
@@ -113,10 +117,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
 
         // Find relevant embeddings in embedding store by semantic similarity
 
-        List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 10,filter);
-
-        System.out.println("relevantEmbeddings : " + relevantEmbeddings);
-
+        List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 5,filter);
 
         // Create a prompt for the model that includes question and relevant embeddings
 
@@ -124,9 +125,9 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
                 "Answer the following question to the best of your ability:\n"
                         + "\n"
                         + "Question:\n"
-                        + "{{questionString}}\n"
+                        + "{{question}}\n"
                         + "\n"
-                        + "Base your answer on the below information from a policy document: \n"
+                        + "Base your answer on the following information and be specific in answering questions and answer in not more than 3 lines:\n"
                         + "{{information}}");
 
         String information = relevantEmbeddings.stream()
@@ -136,9 +137,8 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
         log.info("information : {}",information);
 
 
-
         Map<String, Object> variables = new HashMap<>();
-        variables.put("questionString", question);
+        variables.put("question", questionString);
         variables.put("information", information);
 
         Prompt prompt = promptTemplate.apply(variables);
@@ -146,15 +146,9 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
 
         // Send prompt to the model
 
-        ChatLanguageModel chatModel = OpenAiChatModel.builder()
-                .apiKey(OPENAI_API_KEY) // https://platform.openai.com/account/api-keys
-                .modelName(GPT_3_5_TURBO)
-                .temperature(0.4)
-                .logResponses(true)
-                .logRequests(true)
-                .build();
+      //  AiMessage aiMessage = chatModel.sendUserMessage(prompt).get();
 
-        AiMessage aiMessage = chatModel.sendUserMessage(prompt).get();
+        AiMessage aiMessage = AiMessage.from(conversationalChain.execute(prompt.text()));
 
 
         // See an answer from the model
