@@ -3,6 +3,8 @@ package com.genai.tmgenai.service;
 import com.genai.tmgenai.PineConeEmbeddingstoreCustomImpl;
 import com.genai.tmgenai.PromptConstants;
 import com.genai.tmgenai.dto.Question;
+import com.genai.tmgenai.models.Files;
+import com.genai.tmgenai.repository.FilesRepository;
 import com.google.protobuf.Struct;
 import dev.langchain4j.chain.ConversationalChain;
 import dev.langchain4j.data.document.Document;
@@ -24,8 +26,11 @@ import dev.langchain4j.store.embedding.EmbeddingMatch;
 import dev.langchain4j.store.embedding.PineconeEmbeddingStore;
 import dev.langchain4j.store.embedding.PineconeEmbeddingStoreImpl;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -44,6 +49,7 @@ import static java.util.stream.Collectors.joining;
 
 @Service
 @Slf4j
+@EnableAsync
 public class FileEmbeddingService {
 
     @Value("${key.opnenapikey}")
@@ -52,15 +58,22 @@ public class FileEmbeddingService {
     @Autowired
     private ConversationalChain conversationalChain;
 
+    @Autowired
+    private FilesRepository filesRepository;
+
     private PineConeEmbeddingstoreCustomImpl pinecone = new PineConeEmbeddingstoreCustomImpl("1d0899b3-7abf-40be-a267-ac208d572ed3", "asia-southeast1-gcp-free", "bca6a53", "documents", "default");
 
     public String embedFile(MultipartFile multipartFile,String fileId) throws IOException {
 
+        log.info("splitting");
         File file = new File("/Users/amankumar/Downloads"  + fileId + ".pdf");
         multipartFile.transferTo(file);
+
         DocumentLoader documentLoader = DocumentLoader.from(Paths.get(file.getPath()), PDF);
         Document document = documentLoader.load();
         document.text();
+
+        log.info("splitted");
 
 
         // Split document into segments (one paragraph per segment)
@@ -72,6 +85,7 @@ public class FileEmbeddingService {
            documentSegment.metadata().add("file_id", fileId);
        });
 
+        log.info("getting embeddding");
         EmbeddingModel embeddingModel = OpenAiEmbeddingModel.builder()
                 .apiKey(OPENAI_API_KEY) // https://platform.openai.com/account/api-keys
                 .modelName(TEXT_EMBEDDING_ADA_002)
@@ -80,16 +94,50 @@ public class FileEmbeddingService {
 
         List<Embedding> embeddings = embeddingModel.embedAll(documentSegments).get();
 
+        log.info("got embeddding");
+
         // Store embeddings into embedding store for further search / retrieval
+
+
 
         List<String> addeds= pinecone.addAll(embeddings, documentSegments);
 
+        log.info("added to pinecone");
 
         System.out.println(fileId);
 
-        return getInitialSummary(fileId);
 
 
+        new Thread(() -> saveFileDetails(fileId)).start();
+        log.info("saved to pinecone");
+
+        return "";
+
+    }
+
+    @Async
+    public void saveFileDetails(String fileId) {
+        log.info("Saving file details for file id {}", fileId);
+        Files files = new Files();
+        files.setFileId(fileId);
+        String summary =  getInitialSummary(fileId);
+        String vertical =  getVertical(summary);
+
+        files.setVertical(vertical);
+        files.setSummary(summary);
+
+        filesRepository.save(files);
+    }
+
+    private String getVertical(String summary) {
+         summary = summary.toLowerCase();
+        if(summary.contains("registration number") || summary.contains("registration no") || summary.contains("registration no."))
+            return "Motor";
+         if(summary.contains("motor"))
+            return "Motor";
+         if (summary.contains("health"))
+            return "Health";
+         return null;
 
     }
 
