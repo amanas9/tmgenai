@@ -6,6 +6,7 @@ import com.genai.tmgenai.common.models.UserEnum;
 import com.genai.tmgenai.common.repositories.ChatHistoryRepository;
 import com.genai.tmgenai.dto.*;
 import com.google.protobuf.Struct;
+import dev.langchain4j.chain.ConversationalChain;
 import dev.langchain4j.data.document.DocumentSegment;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.message.AiMessage;
@@ -29,8 +30,7 @@ import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.util.*;
 
-import static dev.langchain4j.model.openai.OpenAiModelName.GPT_3_5_TURBO;
-import static dev.langchain4j.model.openai.OpenAiModelName.TEXT_EMBEDDING_ADA_002;
+import static dev.langchain4j.model.openai.OpenAiModelName.*;
 import static java.time.Duration.ofSeconds;
 import static java.util.stream.Collectors.joining;
 
@@ -48,14 +48,18 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
     private String OPENAI_API_KEY;
 
     @Autowired
+    private ConversationalChain conversationalChain;
+
+    @Autowired
     public ChatDocumentServiceImpl(RestService restService, FileEmbeddingService fileEmbeddingService) {
         this.restService = restService;
         this.fileEmbeddingService = fileEmbeddingService;
     }
     @Override
-    public void embedFile(MultipartFile file,String fileId) throws URISyntaxException, IOException {
+    public String embedFile(MultipartFile file,String fileId) throws URISyntaxException, IOException {
 
-            fileEmbeddingService.embedFile(file, fileId);
+            String summary = fileEmbeddingService.embedFile(file, fileId);
+            return summary;
 
 
     }
@@ -112,18 +116,15 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
 
         List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 5,filter);
 
-        System.out.println("relevantEmbeddings : " + relevantEmbeddings);
-
-
         // Create a prompt for the model that includes question and relevant embeddings
 
         PromptTemplate promptTemplate = PromptTemplate.from(
-                "Answer the following question to the best of your ability :\n"
+                "Answer the following question to the best of your ability:\n"
                         + "\n"
                         + "Question:\n"
-                        + "{{questionString}}\n"
+                        + "{{question}}\n"
                         + "\n"
-                        + "Base your answer on the below information from a policy document: \n"
+                        + "Base your answer on the following information and be specific in answering questions and answer in not more than 3 lines:\n"
                         + "{{information}}");
 
         String information = relevantEmbeddings.stream()
@@ -133,9 +134,8 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
         log.info("information : {}",information);
 
 
-
         Map<String, Object> variables = new HashMap<>();
-        variables.put("questionString", question);
+        variables.put("question", questionString);
         variables.put("information", information);
 
         Prompt prompt = promptTemplate.apply(variables);
@@ -143,15 +143,9 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
 
         // Send prompt to the model
 
-        ChatLanguageModel chatModel = OpenAiChatModel.builder()
-                .apiKey(OPENAI_API_KEY) // https://platform.openai.com/account/api-keys
-                .modelName(GPT_3_5_TURBO)
-                .temperature(1.0)
-                .logResponses(true)
-                .logRequests(true)
-                .build();
+      //  AiMessage aiMessage = chatModel.sendUserMessage(prompt).get();
 
-        AiMessage aiMessage = chatModel.sendUserMessage(prompt).get();
+        AiMessage aiMessage = AiMessage.from(conversationalChain.execute(prompt.text()));
 
 
         // See an answer from the model
