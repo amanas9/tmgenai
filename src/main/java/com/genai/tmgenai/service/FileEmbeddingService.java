@@ -246,7 +246,7 @@ public class FileEmbeddingService {
                 .map(match -> match.embedded().get().text())
                 .collect(joining("\n\n"));
 
-        log.info("information : {}",information);
+//        log.info("information : {}",information);
 
         PromptTemplate promptTemplate = PromptTemplate.from(
                         PromptConstants.PROMPT_FOR_INITIAL_SUMMARY_MOTOR
@@ -267,19 +267,26 @@ public class FileEmbeddingService {
         Prompt prompt = promptTemplate.apply(variables);
 
 
+//        ChatLanguageModel chatModel = OpenAiChatModel.builder()
+//                .apiKey(OPENAI_API_KEY) // https://platform.openai.com/account/api-keys
+//                .modelName(GPT_3_5_TURBO)
+//                .temperature(0.5)
+//                .logResponses(true)
+//                .logRequests(true)
+//                .build();
+
         AiMessage aiMessage = AiMessage.from(conversationalChain.execute(prompt.text()));
 
-
-
-        System.out.println(aiMessage.text());
         if(aiMessage.text()!=null){
             DocumentSegment documentSegment = DocumentSegment.from(aiMessage.text());
             documentSegment.metadata().add("file_id", fileId);
             Embedding embedding = embeddingModel.embed(documentSegment).get();
             pinecone.add(embedding, documentSegment);
         }
+
         return aiMessage.text();
     }
+
 
     private String getPromptTemplateForVertical(String information) {
         EmbeddingModel embeddingModel = OpenAiEmbeddingModel.builder()
@@ -287,6 +294,7 @@ public class FileEmbeddingService {
                 .modelName(TEXT_EMBEDDING_ADA_002)
                 .timeout(ofSeconds(15))
                 .build();
+
 
 
 

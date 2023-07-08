@@ -15,6 +15,11 @@ import dev.langchain4j.chain.ConversationalChain;
 import dev.langchain4j.data.document.DocumentSegment;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.message.AiMessage;
+
+import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.input.Prompt;
+import dev.langchain4j.model.input.PromptTemplate;
+
 import dev.langchain4j.model.StreamingResultHandler;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
@@ -22,6 +27,7 @@ import dev.langchain4j.model.input.Prompt;
 import dev.langchain4j.model.input.PromptTemplate;
 import dev.langchain4j.model.language.StreamingLanguageModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
+
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiStreamingLanguageModel;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
@@ -34,9 +40,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Sort;
+
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -58,6 +66,8 @@ import static dev.langchain4j.model.openai.OpenAiModelName.*;
 import static java.time.Duration.ofSeconds;
 import static java.util.stream.Collectors.joining;
 
+
+
 @Service
 @Slf4j
 public class ChatDocumentServiceImpl implements ChatDocumentService{
@@ -74,7 +84,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
     private FilesRepository filesRepository;
 
     @Value("${key.opnenapikey}")
-    private String OPENAI_API_KEY;
+    private String OPENAI_API_KEY
 
     @Autowired
     private ConversationalChain conversationalChain;
@@ -133,63 +143,63 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
                 .build();
 
         PineConeEmbeddingstoreCustomImpl pinecone = new PineConeEmbeddingstoreCustomImpl("1d0899b3-7abf-40be-a267-ac208d572ed3", "asia-southeast1-gcp-free", "bca6a53", "documents", "default");
-
-
-
         String questionString = question.getQuestion();
-
         Embedding questionEmbedding = embeddingModel.embed(questionString).get();
-
-
         Struct filter = Struct.newBuilder().putFields("file_id", com.google.protobuf.Value.newBuilder().setStringValue(question.getFileId()).build()).build();
-
-
-
         // Find relevant embeddings in embedding store by semantic similarity
 
         List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 5,filter);
 
-
         // Create a prompt for the model that includes question and relevant embeddings
-
-        PromptTemplate promptTemplate = PromptTemplate.from(
-                "Answer the following question to the best of your ability:\n"
-                        + "\n"
-                        + "Question:\n"
-                        + "{{question}}\n"
-                        + "\n"
-                        + "Base your answer on the following information and be specific in answering questions and answer in not more than 3 lines:\n"
-                        + "{{information}}");
-
         String information = relevantEmbeddings.stream()
                 .map(match -> match.embedded().get().text())
                 .collect(joining("\n\n"));
+        // Check for greetings and generate appropriate responses
+        List<String> userGreeting = Arrays.asList("hi","hello","goodmorning","good morning","goodevening","good evening","goodafternoon","good afternoon");
+        String assistantGreetingResponse = "Hello! How can I assist you today?";
+        List<String> userThanks = Arrays.asList("thank you","thanks","welcome","thank you so much","");
+        String assistantThanksResponse = "You're welcome! I'm here to help.";
+        String response = "";
 
-        log.info("information : {}",information);
-
-
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("question", questionString);
-        variables.put("information", information);
-
-        Prompt prompt = promptTemplate.apply(variables);
-
-
-        // Send prompt to the model
-
-      //  AiMessage aiMessage = chatModel.sendUserMessage(prompt).get();
-
-        AiMessage aiMessage = AiMessage.from(conversationalChain.execute(prompt.text()));
-
-
-        // See an answer from the model
+        // Check for greetings
+        if (userGreeting.contains(questionString.toLowerCase())){
+            response = assistantGreetingResponse;
+        }
+        // Check for thanks
+        else if (userThanks.contains(questionString.toLowerCase())) {
+            response = assistantThanksResponse;
+        }
+        else {
+            response = getAiresponse(questionString,assistantGreetingResponse,information); // Your response generation logic
+        }
 
         Answer answer1 = new Answer();
-        answer1.setAnswer(aiMessage.text());
+        answer1.setAnswer(response);
         answer1.setQuestion(question);
         setAnswerInDB(answer1,UserEnum.BOT);
+        autocompleteStore.addQuestion(questionString, AutoCompleteDetails.VERTICAL.FW,question.isSuggestion());
+
         return answer1;
     }
+
+    @Autowired
+    AutocompleteStore autocompleteStore;
+    private String getAiresponse(String questionString, String assistantGreetingResponse, String additionalInstructions) {
+        PromptTemplate promptTemplate = PromptTemplate.from(
+                "{{question}}\n"
+                        + "{{response}}"
+                        + "{{additionalInstructions}}"
+        );
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("question", questionString);
+        variables.put("response", assistantGreetingResponse);
+        variables.put("additionalInstructions",additionalInstructions);
+        Prompt prompt = promptTemplate.apply(variables);
+        AiMessage aiMessage = AiMessage.from(conversationalChain.execute(prompt.text()));
+        System.out.println("Message "+aiMessage.text());
+        return aiMessage.text();
+    }
+
 
     @Override
     public Answer chat(Question question, HttpServletResponse response, HttpServletRequest request) throws URISyntaxException, IOException {
