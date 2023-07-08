@@ -84,7 +84,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
     private FilesRepository filesRepository;
 
     @Value("${key.opnenapikey}")
-    private String OPENAI_API_KEY
+    private String OPENAI_API_KEY;
 
     @Autowired
     private ConversationalChain conversationalChain;
@@ -99,10 +99,10 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
         this.fileEmbeddingService = fileEmbeddingService;
     }
     @Override
-    public String embedFile(MultipartFile file,String fileId) throws URISyntaxException, IOException {
+    public Files embedFile(MultipartFile file,String fileId) throws URISyntaxException, IOException {
 
-            String summary = fileEmbeddingService.embedFile(file, fileId);
-            return summary;
+            Files files = fileEmbeddingService.embedFile(file, fileId);
+            return files;
 
 
     }
@@ -343,7 +343,6 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
         List<String> quotesWord1 = Arrays.asList("share","get","renewal");
         List<String> quotesWord2 = Arrays.asList("quote","quotes","premium","amount","payment");
 
-        List<String> matrixWord = new ArrayList<>();
 
         boolean firstList = false;
         for(String word1 : quotesWord1) {
@@ -366,7 +365,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
             isQuoteRequest = true;
         }
 
-        System.out.println("matrixWord : "+matrixWord);
+
         if (isQuoteRequest){
             String resulturl =  createPremiumRequest(question);
             if(resulturl != null){

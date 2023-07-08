@@ -83,7 +83,7 @@ public class FileEmbeddingService {
 
     private PineConeEmbeddingstoreCustomImpl pinecone = new PineConeEmbeddingstoreCustomImpl("1d0899b3-7abf-40be-a267-ac208d572ed3", "asia-southeast1-gcp-free", "bca6a53", "documents", "default");
 
-    public String embedFile(MultipartFile multipartFile,String fileId) throws IOException {
+    public Files embedFile(MultipartFile multipartFile,String fileId) throws IOException {
 
 
 
@@ -133,7 +133,10 @@ public class FileEmbeddingService {
 
         System.out.println(fileId);
 
-
+        Files files = new Files();
+        files.setFileId(fileId);
+        files.setVertical("COMMON");
+        filesRepository.save(files);
 
         new Thread(() -> {
             try {
@@ -144,14 +147,16 @@ public class FileEmbeddingService {
         }).start();
         log.info("saved to pinecone");
 
-        return "";
+        return files;
 
     }
 
     @Async
     public void saveFileDetails(String fileId,String informationForVertical) throws JsonProcessingException {
         log.info("Saving file details for file id {}", fileId);
-        Files files = new Files();
+        Files files = filesRepository.findByFileId(fileId);
+        if(files == null)
+            files = new Files();
         files.setFileId(fileId);
        // String summary =  getInitialSummary(fileId);
         String vertical =  getPromptTemplateForVertical(informationForVertical);

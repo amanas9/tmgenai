@@ -5,6 +5,7 @@ import com.genai.tmgenai.common.models.UserEnum;
 import com.genai.tmgenai.dto.ChatHistoryResponse;
 import com.genai.tmgenai.dto.FileServiceResponse;
 import com.genai.tmgenai.dto.Question;
+import com.genai.tmgenai.models.Files;
 import com.genai.tmgenai.service.ChatDocumentService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -37,9 +38,9 @@ public class ChatWithDocumentController {
             return ResponseEntity.internalServerError().body("Error in uploading file");
         }
       //analyze file
-      String summary = chatDocumentService.embedFile(file,fileServiceResponse.getFileResponseMeta().getFileId());
-        fileServiceResponse.setSummary(summary);
-      return ResponseEntity.ok(fileServiceResponse);
+      Files files = chatDocumentService.embedFile(file,fileServiceResponse.getFileResponseMeta().getFileId());
+
+      return ResponseEntity.ok(files);
     }
 
     @PostMapping("chat")
