@@ -59,11 +59,15 @@
 			<version>0.6.0</version>
 		</dependency>
 		<dependency>
-			<groupId>com.turtlemint</groupId>
-			<artifactId>turtle-constants</artifactId>
-			<version>5.7.1.6-RENEWAL</version>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20210307</version>
 		</dependency>
-
+		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20210307</version>
+		</dependency>
 		<dependency>
 			<groupId>dev.langchain4j</groupId>
 			<artifactId>langchain4j-pinecone</artifactId>
