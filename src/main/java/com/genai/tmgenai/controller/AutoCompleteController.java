@@ -67,6 +67,7 @@ public class AutoCompleteController {
         quote.setCashless("available");
         quote.setNcb("0");
         quote.setPremium("12,130");
+        quote.setCover_amount("225,000");
         list.add(quote);
 
         quote = new Quote();
@@ -76,6 +77,8 @@ public class AutoCompleteController {
         quote.setCashless("available");
         quote.setNcb("0");
         quote.setPremium("12,010");
+        quote.setCover_amount("220,000");
+
         list.add(quote);
 
         quote = new Quote();
@@ -86,6 +89,7 @@ public class AutoCompleteController {
         quote.setCashless("not available");
         quote.setNcb("0");
         quote.setPremium("10,531");
+        quote.setCover_amount("190,000");
         list.add(quote);
 
         quote = new Quote();
@@ -95,6 +99,7 @@ public class AutoCompleteController {
         quote.setCashless("available");
         quote.setNcb("0");
         quote.setPremium("11,130");
+        quote.setCover_amount("180,000");
         list.add(quote);
 
         quote = new Quote();
@@ -104,6 +109,7 @@ public class AutoCompleteController {
         quote.setCashless("available");
         quote.setNcb("0");
         quote.setPremium("11,500");
+        quote.setCover_amount("180,000");
         list.add(quote);
 
         quote = new Quote();
@@ -113,6 +119,7 @@ public class AutoCompleteController {
         quote.setCashless("available");
         quote.setNcb("0");
         quote.setPremium("11,200");
+        quote.setCover_amount("172,000");
 
         list.add(quote);
         return ResponseEntity.ok(list);
