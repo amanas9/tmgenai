@@ -19,6 +19,7 @@ public class ChatModalConfig {
         ConversationalChain chain = ConversationalChain.builder()
                 .chatLanguageModel(OpenAiChatModel.builder()
                         .modelName(GPT_3_5_TURBO)
+                        .temperature(0.0)
                         .apiKey(OPENAI_API_KEY) // https://platform.openai.com/account/api-keys
                         .build())
                 .chatMemory(MessageWindowChatMemory.builder()

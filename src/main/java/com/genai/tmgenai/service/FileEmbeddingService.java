@@ -37,6 +37,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,6 +80,8 @@ public class FileEmbeddingService {
         log.info("splitted");
 
 
+
+
         // Split document into segments (one paragraph per segment)
 
         DocumentSplitter splitter = new CharacterSplitter(1000,15);
@@ -88,7 +91,9 @@ public class FileEmbeddingService {
            documentSegment.metadata().add("file_id", fileId);
        });
 
-        log.info("getting embeddding");
+        String informationForVertical = documentSegments.stream().limit(4).map(DocumentSegment::text).collect(joining("\n\n"));
+
+                log.info("getting embeddding");
         EmbeddingModel embeddingModel = OpenAiEmbeddingModel.builder()
                 .apiKey(OPENAI_API_KEY) // https://platform.openai.com/account/api-keys
                 .modelName(TEXT_EMBEDDING_ADA_002)
@@ -111,7 +116,7 @@ public class FileEmbeddingService {
 
 
 
-        new Thread(() -> saveFileDetails(fileId)).start();
+        new Thread(() -> saveFileDetails(fileId,informationForVertical)).start();
         log.info("saved to pinecone");
 
         return "";
@@ -119,44 +124,64 @@ public class FileEmbeddingService {
     }
 
     @Async
-    public void saveFileDetails(String fileId) {
+    public void saveFileDetails(String fileId,String informationForVertical) {
         log.info("Saving file details for file id {}", fileId);
         Files files = new Files();
         files.setFileId(fileId);
-        String summary =  getInitialSummary(fileId);
-        String vertical =  getVertical(summary);
+       // String summary =  getInitialSummary(fileId);
+        String vertical =  getPromptTemplateForVertical(informationForVertical);
+
+        if(vertical.contains("TW"))
+            vertical = "TW";
+        if(vertical.contains("FW"))
+            vertical = "FW";
+        if(vertical.contains("CV"))
+            vertical = "CV";
+        if(vertical.contains("HEALTH"))
+            vertical = "HEALTH";
 
         files.setVertical(vertical);
+        String summary =  getInitialSummary(fileId, vertical);
         files.setSummary(summary);
 
         filesRepository.save(files);
     }
 
-    private String getVertical(String summary) {
-         summary = summary.toLowerCase();
-        if(summary.contains("registration number") || summary.contains("registration no") || summary.contains("registration no."))
-            return "Motor";
-         if(summary.contains("motor"))
-            return "Motor";
-         if (summary.contains("health"))
-            return "Health";
-         return null;
+//    private String getVertical(String summary) {
+//         summary = summary.toLowerCase();
+//        if(summary.contains("registration number") || summary.contains("registration no") || summary.contains("registration no."))
+//            return "Motor";
+//         if(summary.contains("motor"))
+//            return "Motor";
+//         if (summary.contains("health"))
+//            return "Health";
+//         return null;
+//
+//    }
 
-    }
-
-    private String getInitialSummary(String fileId) {
+    private String getInitialSummary(String fileId,String vertical) {
         EmbeddingModel embeddingModel = OpenAiEmbeddingModel.builder()
                 .apiKey(OPENAI_API_KEY) // https://platform.openai.com/account/api-keys
                 .modelName(TEXT_EMBEDDING_ADA_002)
                 .timeout(ofSeconds(15))
                 .build();
 
-        Embedding questionEmbedding = embeddingModel.embed(PromptConstants.PROMPT_FOR_INITIAL_SUMMARY).get();
-
         Struct filter = Struct.newBuilder().putFields("file_id", com.google.protobuf.Value.newBuilder().setStringValue(fileId).build()).build();
 
-        // Find relevant embeddings in embedding store by semantic similarity
-        List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = pinecone.findRelevant(questionEmbedding,6,filter);
+
+        Embedding questionEmbedding = embeddingModel.embed(PromptConstants.PROMPT_FOR_INITIAL_SUMMARY_MOTOR).get();
+        if(vertical.equalsIgnoreCase("Health"))
+            questionEmbedding = embeddingModel.embed(PromptConstants.PROMPT_FOR_INITIAL_SUMMARY_HEALTH).get();
+
+
+        List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = new ArrayList<>();
+
+        if(vertical.equalsIgnoreCase("Health"))
+            relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 10, filter);
+        else
+            relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 6, filter);
+
+
 
         String information = relevantEmbeddings.stream()
                 .map(match -> match.embedded().get().text())
@@ -165,9 +190,16 @@ public class FileEmbeddingService {
         log.info("information : {}",information);
 
         PromptTemplate promptTemplate = PromptTemplate.from(
-                        PromptConstants.PROMPT_FOR_INITIAL_SUMMARY
+                        PromptConstants.PROMPT_FOR_INITIAL_SUMMARY_MOTOR
                         + "```{{information}}```\n"
         );
+        if(vertical.equalsIgnoreCase("Health"))
+            promptTemplate = PromptTemplate.from(
+                    PromptConstants.PROMPT_FOR_INITIAL_SUMMARY_HEALTH
+                            + "```{{information}}```\n"
+            );
+
+
 
         Map<String, Object> variables = new HashMap<>();
 
@@ -199,14 +231,17 @@ public class FileEmbeddingService {
         return aiMessage.text();
     }
 
-    private Prompt getPromptTemplateForVertical(String information ){
+    private String getPromptTemplateForVertical(String information) {
+        EmbeddingModel embeddingModel = OpenAiEmbeddingModel.builder()
+                .apiKey(OPENAI_API_KEY) // https://platform.openai.com/account/api-keys
+                .modelName(TEXT_EMBEDDING_ADA_002)
+                .timeout(ofSeconds(15))
+                .build();
+
+
+
         PromptTemplate promptTemplate = PromptTemplate.from(
-                "determine the value of vertical as json key it's value by following below steps from information below delimited by triple backticks:\n"
-                        + "1.determine  if the given information is about health policy or motor policy\n"
-                        + "2.if it is health policy, then the vertical will be HEALTH\n"
-                        + "3.if it is a motor policy, then vertical will be TW if the make model variant belongs to a two wheeler, FW if it belongs to four wheeler and CV if belongs to commercial vehicle\n"
-                        + "/n"
-                        + "give the output only as a json object with vertical as key\n"
+                PromptConstants.PROMPT_FOR_GETTING_VERTICAL
                         +" ```{{information}}```\n");
 
         Map<String, Object> variables = new HashMap<>();
@@ -215,7 +250,10 @@ public class FileEmbeddingService {
 
         Prompt prompt = promptTemplate.apply(variables);
 
-        return prompt;
+        AiMessage aiMessage = AiMessage.from(conversationalChain.execute(prompt.text()));
+
+
+        return aiMessage.text();
     }
 
 }
