@@ -2,10 +2,7 @@ package com.genai.tmgenai.service;
 
 import com.genai.tmgenai.common.models.ChatHistory;
 import com.genai.tmgenai.common.models.UserEnum;
-import com.genai.tmgenai.dto.Answer;
-import com.genai.tmgenai.dto.ChatHistoryResponse;
-import com.genai.tmgenai.dto.FileServiceResponse;
-import com.genai.tmgenai.dto.Question;
+import com.genai.tmgenai.dto.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,6 +21,8 @@ public interface ChatDocumentService {
     public FileServiceResponse uploadFile(MultipartFile file) throws URISyntaxException;
 
     public Answer chat(Question question) throws URISyntaxException, IOException;
+
+    public AnswerResponse chatting(Question question) throws URISyntaxException, IOException;
 
 
     public Answer chat(Question question, HttpServletResponse response, HttpServletRequest request) throws URISyntaxException, IOException;

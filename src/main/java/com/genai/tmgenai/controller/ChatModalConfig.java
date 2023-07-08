@@ -2,6 +2,7 @@ package com.genai.tmgenai.controller;
 
 import dev.langchain4j.chain.ConversationalChain;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -28,6 +29,19 @@ public class ChatModalConfig {
                         .build())
                 .build();
         return chain;
+    }
+
+    @Bean
+    public ChatLanguageModel getChatModel() {
+
+        ChatLanguageModel chatModel = OpenAiChatModel.builder()
+                .apiKey(OPENAI_API_KEY) // https://platform.openai.com/account/api-keys
+                .modelName(GPT_3_5_TURBO)
+                .temperature(0.0)
+                .logResponses(true)
+                .logRequests(true)
+                .build();
+        return chatModel;
     }
 
 }

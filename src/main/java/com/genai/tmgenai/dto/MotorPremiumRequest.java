@@ -12,15 +12,15 @@ public class MotorPremiumRequest  {
 
     private static final Logger LOG = LoggerFactory.getLogger("motor-premium-request");
 
-    private int businessType;
+    private int businessType=1;
 
-    private String vehicleId;
+    private String vehicleId="435";
 
     private String rtoId;
 
     private String rtoDesp;
 
-    private String requestId;
+    private String requestId="123456780";
 
     String make;
 
@@ -32,13 +32,13 @@ public class MotorPremiumRequest  {
 
     private String registrationNo;
 
-    private String customerName;
+    private String customerName="Mr test";
 
-    private String customerFirstName;
+    private String customerFirstName="Mr";
 
-    private String customerLastName;
+    private String customerLastName="test";
 
-    String registrationDate;
+    String registrationDate="12/12/";
 
     String isPaid = "No";
 
@@ -48,11 +48,15 @@ public class MotorPremiumRequest  {
 
     private String vertical;
 
+    private Boolean isPreviousPolicyFromSameBroker = true;
+    private Boolean isRenewal =  true;
+    private Boolean expiryFlag =  false;
+    private Boolean isExpiryDateSet =  true;
     private String utmSource = "(direct)";
 
     private String utmMedium = "(none)";
 
-    String previousInsurer;
+    String previousInsurer = "HDFC";
 
     private boolean prevClaim;
 
@@ -65,6 +69,8 @@ public class MotorPremiumRequest  {
 
     private boolean eligibleForNCB;
 
+    private String year;
+
 
     private boolean unknownNCBFlag;
 
@@ -74,7 +80,7 @@ public class MotorPremiumRequest  {
 
     private String quoteId;
 
-    private String policyType;
+    private String policyType="comprehensive";
 
     private Double idv;
 

@@ -1,10 +1,15 @@
 package com.genai.tmgenai.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.genai.tmgenai.PineConeEmbeddingstoreCustomImpl;
 import com.genai.tmgenai.common.models.ChatHistory;
 import com.genai.tmgenai.common.models.UserEnum;
 import com.genai.tmgenai.common.repositories.ChatHistoryRepository;
 import com.genai.tmgenai.dto.*;
+import com.genai.tmgenai.models.Files;
+import com.genai.tmgenai.repository.FilesRepository;
 import com.google.protobuf.Struct;
 import dev.langchain4j.chain.ConversationalChain;
 import dev.langchain4j.data.document.DocumentSegment;
@@ -29,6 +34,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -55,17 +62,26 @@ import static java.util.stream.Collectors.joining;
 @Slf4j
 public class ChatDocumentServiceImpl implements ChatDocumentService{
 
+
     private final RestService restService;
+
     private final FileEmbeddingService fileEmbeddingService;
 
     @Autowired
     private ChatHistoryRepository chatHistoryRepository;
+
+    @Autowired
+    private FilesRepository filesRepository;
 
     @Value("${key.opnenapikey}")
     private String OPENAI_API_KEY;
 
     @Autowired
     private ConversationalChain conversationalChain;
+
+    public static final String HEADER_X_BROKER = "x-broker";
+    public static final String HEADER_X_TENANT = "x-tenant";
+    public static final String TURTLEMINT = "turtlemint";
 
     @Autowired
     public ChatDocumentServiceImpl(RestService restService, FileEmbeddingService fileEmbeddingService) {
@@ -304,6 +320,194 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
         }
         return chatHistoryList;
 
+    }
+
+    @Override
+    public AnswerResponse chatting(Question question) throws URISyntaxException, IOException {
+        setQuestionInDB(question, UserEnum.Customer);
+
+        String questionString = question.getQuestion();
+
+        questionString = questionString.toLowerCase();
+
+        List<String> quotesWord1 = Arrays.asList("share","get","renewal");
+        List<String> quotesWord2 = Arrays.asList("quote","quotes","premium","amount","payment");
+
+        List<String> matrixWord = new ArrayList<>();
+
+        boolean firstList = false;
+        for(String word1 : quotesWord1) {
+            if(questionString.contains(word1)) {
+                firstList = true;
+                break;
+            }
+        }
+
+        boolean secondList = false;
+        for(String word1 : quotesWord2) {
+            if(questionString.contains(word1)) {
+                secondList = true;
+                break;
+            }
+        }
+
+        boolean isQuoteRequest = false;
+        if(firstList && secondList) {
+            isQuoteRequest = true;
+        }
+
+        System.out.println("matrixWord : "+matrixWord);
+        if (isQuoteRequest){
+            String resulturl =  createPremiumRequest(question);
+            if(resulturl != null){
+                Answer answer = new Answer();
+                answer.setAnswer(resulturl);
+                answer.setQuestion(question);
+                AnswerResponse answerResponse = new AnswerResponse();
+                answerResponse.setAnswer(answer);
+                answerResponse.setVertical("COMMON");
+                return answerResponse;
+            }
+        }
+
+
+        EmbeddingModel embeddingModel = OpenAiEmbeddingModel.builder()
+                .apiKey(OPENAI_API_KEY) // https://platform.openai.com/account/api-keys
+                .modelName(TEXT_EMBEDDING_ADA_002)
+                .timeout(ofSeconds(15))
+                .build();
+
+        PineConeEmbeddingstoreCustomImpl pinecone = new PineConeEmbeddingstoreCustomImpl("1d0899b3-7abf-40be-a267-ac208d572ed3", "asia-southeast1-gcp-free", "bca6a53", "documents", "default");
+
+        Embedding questionEmbedding = embeddingModel.embed(questionString).get();
+
+
+        Struct filter = Struct.newBuilder().putFields("file_id", com.google.protobuf.Value.newBuilder().setStringValue(question.getFileId()).build()).build();
+
+
+
+        // Find relevant embeddings in embedding store by semantic similarity
+
+        List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 5,filter);
+
+
+        // Create a prompt for the model that includes question and relevant embeddings
+
+        PromptTemplate promptTemplate = PromptTemplate.from(
+                "Answer the following question to the best of your ability:\n"
+                        + "\n"
+                        + "Question:\n"
+                        + "{{question}}\n"
+                        + "\n"
+                        + "Base your answer on the following information and be specific in answering questions and answer in not more than 3 lines:\n"
+                        + "{{information}}");
+
+        String information = relevantEmbeddings.stream()
+                .map(match -> match.embedded().get().text())
+                .collect(joining("\n\n"));
+
+        log.info("information : {}",information);
+
+
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("question", questionString);
+        variables.put("information", information);
+
+        Prompt prompt = promptTemplate.apply(variables);
+
+
+        // Send prompt to the model
+
+        //  AiMessage aiMessage = chatModel.sendUserMessage(prompt).get();
+
+        AiMessage aiMessage = AiMessage.from(conversationalChain.execute(prompt.text()));
+
+
+        // See an answer from the model
+
+
+        Answer answer1 = new Answer();
+        answer1.setAnswer(aiMessage.text());
+        answer1.setQuestion(question);
+        setAnswerInDB(answer1,UserEnum.BOT);
+
+        AnswerResponse answerResponse = new AnswerResponse();
+        answerResponse.setAnswer(answer1);
+        answerResponse.setFileId(question.getFileId());
+        Files file = filesRepository.findByFileId(question.getFileId());
+        answerResponse.setVertical(file.getVertical()==null?"COMMON":file.getVertical());
+        return answerResponse;
+    }
+
+
+
+    private String createPremiumRequest(Question question) throws JsonProcessingException {
+        Files files = filesRepository.findByFileId(question.getFileId());
+        MotorRequest motorRequest = new MotorRequest();
+        motorRequest.setVertical(files.getVertical());
+        MotorPremiumRequest motorPremiumRequest = new MotorPremiumRequest();
+        JsonNode jsonNode = new ObjectMapper().readTree(files.getPresquestInfo());
+        motorPremiumRequest.setVertical(files.getVertical());
+
+        String regNum =  jsonNode.get("registration_number").asText();
+        String make =  jsonNode.get("make").asText();
+        String model =  jsonNode.get("model").asText();
+        String variant =  jsonNode.get("variant").asText();
+        String fuelType =  jsonNode.get("fuel").asText();
+        String year =  jsonNode.get("year").asText();
+
+        motorPremiumRequest.setYear(year);
+
+        motorPremiumRequest.setRegistrationNo(regNum);
+        motorPremiumRequest.setMake(make);
+        motorPremiumRequest.setModel(model);
+        motorPremiumRequest.setVariant(variant);
+        motorPremiumRequest.setFuel(fuelType);
+        motorPremiumRequest.setRegistrationDate(motorPremiumRequest.getRegistrationDate()+year);
+        if(regNum != null && regNum.length()>=10){
+            String rto_id = regNum.substring(0, 4);
+            motorPremiumRequest.setRtoId(rto_id);
+            motorPremiumRequest.setUserStateCode(rto_id.substring(0, 2));
+            motorRequest.setStateCode(rto_id.substring(0, 2));
+
+        }
+
+
+
+
+        motorRequest.setMotorPremiumRequest(motorPremiumRequest);
+        try {
+            String url = "https://pro.turtlemint.com/api/platform/v0/premiums/request";
+            log.info("MOTOR REQUEST {} {}",url, new  ObjectMapper().writeValueAsString(motorRequest));
+            var response = restService.postForEntity(new URI(url),
+                    new HttpEntity<>(motorRequest, getDefaultHeaders()),
+                    MotorResponse.class
+            );
+
+            if(response != null && response.getBody() != null && response.getBody().getData() != null ){
+               MotorResponseData motorResponseData = response.getBody().getData();
+                if(motorResponseData.getPremiumRequest() != null){
+                     return motorResponseData.getPremiumRequest().getResultURL();
+
+                }
+            }
+
+            log.info("MOTOR RESPONSE {}",new ObjectMapper().writeValueAsString(response.getBody()));
+
+        } catch (Exception e) {
+            log.info("Exception in create motor request ",e);
+
+        }
+
+        return null;
+
+    }
+
+    private HttpHeaders getDefaultHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_X_BROKER, TURTLEMINT);
+        headers.set(HEADER_X_TENANT, TURTLEMINT);
+        return headers;
     }
 
 }

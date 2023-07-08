@@ -44,7 +44,7 @@ public class ChatWithDocumentController {
 
     @PostMapping("chat")
     public ResponseEntity<Object> chat(@RequestBody Question question) throws URISyntaxException, IOException {
-        return ResponseEntity.ok(chatDocumentService.chat(question));
+        return ResponseEntity.ok(chatDocumentService.chatting(question));
     }
 
 

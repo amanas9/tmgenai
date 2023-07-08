@@ -1,10 +1,17 @@
 package com.genai.tmgenai.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.genai.tmgenai.PineConeEmbeddingstoreCustomImpl;
 import com.genai.tmgenai.PromptConstants;
+import com.genai.tmgenai.dto.MotorPremiumRequest;
+import com.genai.tmgenai.dto.MotorRequest;
+import com.genai.tmgenai.dto.MotorResponse;
 import com.genai.tmgenai.dto.Question;
 import com.genai.tmgenai.models.Files;
 import com.genai.tmgenai.repository.FilesRepository;
+import com.google.gson.JsonObject;
 import com.google.protobuf.Struct;
 import dev.langchain4j.chain.ConversationalChain;
 import dev.langchain4j.data.document.Document;
@@ -29,6 +36,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
@@ -36,6 +46,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -61,6 +72,14 @@ public class FileEmbeddingService {
 
     @Autowired
     private FilesRepository filesRepository;
+
+
+
+    @Autowired
+    private ChatLanguageModel model;
+
+    @Autowired
+    private RestService restService;
 
     private PineConeEmbeddingstoreCustomImpl pinecone = new PineConeEmbeddingstoreCustomImpl("1d0899b3-7abf-40be-a267-ac208d572ed3", "asia-southeast1-gcp-free", "bca6a53", "documents", "default");
 
@@ -116,7 +135,13 @@ public class FileEmbeddingService {
 
 
 
-        new Thread(() -> saveFileDetails(fileId,informationForVertical)).start();
+        new Thread(() -> {
+            try {
+                saveFileDetails(fileId,informationForVertical);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        }).start();
         log.info("saved to pinecone");
 
         return "";
@@ -124,7 +149,7 @@ public class FileEmbeddingService {
     }
 
     @Async
-    public void saveFileDetails(String fileId,String informationForVertical) {
+    public void saveFileDetails(String fileId,String informationForVertical) throws JsonProcessingException {
         log.info("Saving file details for file id {}", fileId);
         Files files = new Files();
         files.setFileId(fileId);
@@ -142,22 +167,58 @@ public class FileEmbeddingService {
 
         files.setVertical(vertical);
         String summary =  getInitialSummary(fileId, vertical);
+        if(!vertical.equalsIgnoreCase("HEALTH"))
+        {
+            String jsonString = getPrequestinfo(fileId);
+            files.setPresquestInfo(jsonString);
+           // createPremiumRequest(files);
+        }
         files.setSummary(summary);
 
         filesRepository.save(files);
     }
 
-//    private String getVertical(String summary) {
-//         summary = summary.toLowerCase();
-//        if(summary.contains("registration number") || summary.contains("registration no") || summary.contains("registration no."))
-//            return "Motor";
-//         if(summary.contains("motor"))
-//            return "Motor";
-//         if (summary.contains("health"))
-//            return "Health";
-//         return null;
-//
-//    }
+
+    private String getPrequestinfo(String fileId) {
+        EmbeddingModel embeddingModel = OpenAiEmbeddingModel.builder()
+                .apiKey(OPENAI_API_KEY) // https://platform.openai.com/account/api-keys
+                .modelName(TEXT_EMBEDDING_ADA_002)
+                .timeout(ofSeconds(15))
+                .build();
+
+        Struct filter = Struct.newBuilder().putFields("file_id", com.google.protobuf.Value.newBuilder().setStringValue(fileId).build()).build();
+
+
+        Embedding questionEmbedding = embeddingModel.embed(PromptConstants.PROMPT_FOR_GETTING_PREQEST).get();
+
+        List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = new ArrayList<>();
+        relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 10, filter);
+
+        String information = relevantEmbeddings.stream()
+                .map(match -> match.embedded().get().text())
+                .collect(joining("\n\n"));
+
+
+
+        PromptTemplate promptTemplate = PromptTemplate.from(
+                PromptConstants.PROMPT_FOR_GETTING_PREQEST
+                        +" ```{{information}}```\n");
+
+        Map<String, Object> variables = new HashMap<>();
+
+        variables.put("information", information);
+
+        Prompt prompt = promptTemplate.apply(variables);
+
+        AiMessage aiMessage = model.sendUserMessage(prompt.text()).get();
+
+        System.out.println("aiMessage = " + aiMessage.text());
+
+        return aiMessage.text();
+    }
+
+
+
 
     private String getInitialSummary(String fileId,String vertical) {
         EmbeddingModel embeddingModel = OpenAiEmbeddingModel.builder()
@@ -176,10 +237,8 @@ public class FileEmbeddingService {
 
         List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = new ArrayList<>();
 
-        if(vertical.equalsIgnoreCase("Health"))
-            relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 10, filter);
-        else
-            relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 6, filter);
+
+        relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 10, filter);
 
 
 
@@ -207,19 +266,10 @@ public class FileEmbeddingService {
 
         Prompt prompt = promptTemplate.apply(variables);
 
-//        ChatLanguageModel chatModel = OpenAiChatModel.builder()
-//                .apiKey(OPENAI_API_KEY) // https://platform.openai.com/account/api-keys
-//                .modelName(GPT_3_5_TURBO)
-//                .temperature(0.5)
-//                .logResponses(true)
-//                .logRequests(true)
-//                .build();
-
-
 
         AiMessage aiMessage = AiMessage.from(conversationalChain.execute(prompt.text()));
 
-      //  AiMessage aiMessage = chatModel.sendUserMessage(prompt).get();
+
 
         System.out.println(aiMessage.text());
         if(aiMessage.text()!=null){
@@ -252,8 +302,11 @@ public class FileEmbeddingService {
 
         AiMessage aiMessage = AiMessage.from(conversationalChain.execute(prompt.text()));
 
-
         return aiMessage.text();
     }
+
+
+
+
 
 }
