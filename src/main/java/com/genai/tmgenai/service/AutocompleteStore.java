@@ -64,8 +64,8 @@ public class AutocompleteStore {
         tmpDetailsList.add(new AutoCompleteDetails("Why should I renew my policy?",COMMON,GENERAL));
         tmpDetailsList.add(new AutoCompleteDetails("How much will I get on my policy?",HEALTH,GENERAL));
         tmpDetailsList.add(new AutoCompleteDetails("can I get cheaper quotes?",HEALTH,GENERAL));
-        tmpDetailsList.add(new AutoCompleteDetails("Get quotes?",FW,GENERAL));
-        tmpDetailsList.add(new AutoCompleteDetails("What is NCB?",FW,GENERAL));
+        tmpDetailsList.add(new AutoCompleteDetails("Get quotes?",TW,GENERAL));
+        tmpDetailsList.add(new AutoCompleteDetails("What is NCB?",TW,GENERAL));
 
         this.detailsList = tmpDetailsList;
     }

@@ -28,6 +28,8 @@ public class Autocomplete {
     }
 
     public List<AutoCompleteDetails> giveSuggestions(String prefix, AutoCompleteDetails.VERTICAL vertical) {
+        if(prefix == null)
+            prefix = "";
         TrieNode prefixNode = findNode(prefix.toLowerCase());
         List<AutoCompleteDetails> suggestions = new ArrayList<>();
         collectWords(prefixNode, new StringBuilder(prefix), suggestions, vertical);
