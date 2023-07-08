@@ -31,8 +31,6 @@ import static dev.langchain4j.model.openai.OpenAiModelName.*;
 import static java.time.Duration.ofSeconds;
 import static java.util.stream.Collectors.joining;
 
-import com.cybozu.labs.langdetect.DetectorFactory;
-import com.cybozu.labs.langdetect.LangDetectException;
 
 
 @Service
@@ -46,7 +44,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
     private ChatHistoryRepository chatHistoryRepository;
 
     @Value("${key.opnenapikey}")
-    private String OPENAI_API_KEY;
+    private String OPENAI_API_KEY
 
     @Autowired
     private ConversationalChain conversationalChain;
@@ -93,19 +91,6 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
     @Override
     public Answer chat(Question question) throws URISyntaxException, IOException {
         setQuestionInDB(question, UserEnum.Customer);
-//
-//        try {
-//            String profilesPath = getClass().getClassLoader().getResource("profiles").getPath();
-//            DetectorFactory.loadProfile("/Users/ankush/Desktop/Turtlemint/Hackathon/tmgenai/src/main/profiles/");
-//
-////            DetectorFactory.loadProfile("profiles");
-//        } catch (LangDetectException e) {
-//            // Handle initialization error
-//            e.printStackTrace();
-//        }
-
-
-
 
         EmbeddingModel embeddingModel = OpenAiEmbeddingModel.builder()
                 .apiKey(OPENAI_API_KEY) // https://platform.openai.com/account/api-keys
@@ -114,36 +99,21 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
                 .build();
 
         PineConeEmbeddingstoreCustomImpl pinecone = new PineConeEmbeddingstoreCustomImpl("1d0899b3-7abf-40be-a267-ac208d572ed3", "asia-southeast1-gcp-free", "bca6a53", "documents", "default");
-
-
-
         String questionString = question.getQuestion();
-
         Embedding questionEmbedding = embeddingModel.embed(questionString).get();
-
-
         Struct filter = Struct.newBuilder().putFields("file_id", com.google.protobuf.Value.newBuilder().setStringValue(question.getFileId()).build()).build();
-
-
-
         // Find relevant embeddings in embedding store by semantic similarity
 
         List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 5,filter);
-
         // Create a prompt for the model that includes question and relevant embeddings
-
         String information = relevantEmbeddings.stream()
                 .map(match -> match.embedded().get().text())
                 .collect(joining("\n\n"));
-
-//        log.info("information : {}",information);
-
         // Check for greetings and generate appropriate responses
         List<String> userGreeting = Arrays.asList("hi","hello","goodmorning","good morning","goodevening","good evening","goodafternoon","good afternoon");
         String assistantGreetingResponse = "Hello! How can I assist you today?";
         List<String> userThanks = Arrays.asList("thank you","thanks","welcome","thank you so much","");
         String assistantThanksResponse = "You're welcome! I'm here to help.";
-        String additionalInstructions = "Please let me if anything else I can do for you ?";
         String response = "";
 
         // Check for greetings
@@ -155,18 +125,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
             response = assistantThanksResponse;
         }
         else {
-//            String detectedLanguage = "en";
-//            try {
-//                com.cybozu.labs.langdetect.Detector detector = DetectorFactory.create();
-//                detector.append(questionString);
-//                detectedLanguage = detector.detect();
-//                System.out.println("detected "+detectedLanguage);
-                response = getAiresponse(questionString,assistantGreetingResponse,information); // Your response generation logic
-//            } catch (Exception e) {
-//                detectedLanguage = "Unknown";
-//                return null;
-//            }
-            // Handle other types of messages
+            response = getAiresponse(questionString,assistantGreetingResponse,information); // Your response generation logic
         }
 
         Answer answer1 = new Answer();
@@ -186,15 +145,10 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
                         + "{{response}}"
                         + "{{additionalInstructions}}"
         );
-//        String translatedResponse = "give response in english language and english text";
-//        if ("hi".equalsIgnoreCase(detectedLanguage)){
-//            translatedResponse = "give response in hindi language and hindi text";
-//        }
         Map<String, Object> variables = new HashMap<>();
         variables.put("question", questionString);
         variables.put("response", assistantGreetingResponse);
         variables.put("additionalInstructions",additionalInstructions);
-//        variables.put("translatedResponse",translatedResponse);
         Prompt prompt = promptTemplate.apply(variables);
         AiMessage aiMessage = AiMessage.from(conversationalChain.execute(prompt.text()));
         System.out.println("Message "+aiMessage.text());

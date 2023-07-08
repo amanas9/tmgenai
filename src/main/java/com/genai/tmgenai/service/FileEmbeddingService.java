@@ -183,39 +183,15 @@ public class FileEmbeddingService {
 //                .logRequests(true)
 //                .build();
 
-
-
         AiMessage aiMessage = AiMessage.from(conversationalChain.execute(prompt.text()));
-
-      //  AiMessage aiMessage = chatModel.sendUserMessage(prompt).get();
-
-//        System.out.println("hello "+aiMessage);
         if(aiMessage.text()!=null){
             DocumentSegment documentSegment = DocumentSegment.from(aiMessage.text());
             documentSegment.metadata().add("file_id", fileId);
             Embedding embedding = embeddingModel.embed(documentSegment).get();
             pinecone.add(embedding, documentSegment);
         }
-        Map<String, String> jsonData = extractInfo(aiMessage.text());
-        System.out.println(jsonData);
 
         return aiMessage.text();
-    }
-
-    public Map<String, String> extractInfo(String text) {
-        Map<String, String> infoMap = new HashMap<>();
-
-        String[] lines = text.split("\n");
-        for (String line : lines) {
-            String[] keyValue = line.split(":");
-            if (keyValue.length == 2) {
-                String key = keyValue[0].trim().replaceFirst("^-\\s*", "");
-                String value = keyValue[1].trim();
-                infoMap.put(key, value);
-            }
-        }
-
-        return infoMap;
     }
 
 private Prompt getPromptTemplateForVertical(String information ){
