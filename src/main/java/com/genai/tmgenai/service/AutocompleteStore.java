@@ -57,17 +57,16 @@ public class AutocompleteStore {
     private void loadDetails() {
 
         ArrayList tmpDetailsList = new ArrayList<>();
-
-        detailsList.add(new AutoCompleteDetails("My premium is too high, can I get cheaper quotes?",FW,GENERAL));
-        detailsList.add(new AutoCompleteDetails("What does NCB mean?",FW,GENERAL));
-        detailsList.add(new AutoCompleteDetails("Why should I renew my policy?",HEALTH,GENERAL));
-        detailsList.add(new AutoCompleteDetails("How much will I get on a policy claim?",HEALTH,GENERAL));
-        detailsList.add(new AutoCompleteDetails("Why should I renew my policy?",COMMON,GENERAL));
-        detailsList.add(new AutoCompleteDetails("How much will I get on a policy claim?",COMMON,GENERAL));
-        detailsList.add(new AutoCompleteDetails("My premium is too high, can I get cheaper quotes?",TW,GENERAL));
-        detailsList.add(new AutoCompleteDetails("What does NCB mean?",TW,GENERAL));
-        detailsList.add(new AutoCompleteDetails("My premium is too high, can I get cheaper quotes?",CV,GENERAL));
-        detailsList.add(new AutoCompleteDetails("What does NCB mean?",CV,GENERAL));
+        tmpDetailsList.add(new AutoCompleteDetails("My premium is too high, can I get cheaper quotes?",FW,GENERAL));
+        tmpDetailsList.add(new AutoCompleteDetails("What does NCB mean?",FW,GENERAL));
+        tmpDetailsList.add(new AutoCompleteDetails("Why should I renew my policy?",HEALTH,GENERAL));
+        tmpDetailsList.add(new AutoCompleteDetails("How much will I get on a policy claim?",HEALTH,GENERAL));
+        tmpDetailsList.add(new AutoCompleteDetails("Why should I renew my policy?",COMMON,GENERAL));
+        tmpDetailsList.add(new AutoCompleteDetails("How much will I get on a policy claim?",COMMON,GENERAL));
+        tmpDetailsList.add(new AutoCompleteDetails("My premium is too high, can I get cheaper quotes?",TW,GENERAL));
+        tmpDetailsList.add(new AutoCompleteDetails("What does NCB mean?",TW,GENERAL));
+        tmpDetailsList.add(new AutoCompleteDetails("My premium is too high, can I get cheaper quotes?",CV,GENERAL));
+        tmpDetailsList.add(new AutoCompleteDetails("What does NCB mean?",CV,GENERAL));
         this.detailsList = tmpDetailsList;
     }
     public List<AutoCompleteDetails> getDetailsList() {
