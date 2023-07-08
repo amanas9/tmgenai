@@ -7,4 +7,6 @@ import java.util.UUID;
 
 public interface FilesRepository extends JpaRepository<Files, UUID> {
     Files save(Files file);
+
+    Files findByFileId(String fileId);
 }

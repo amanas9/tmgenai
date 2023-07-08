@@ -6,6 +6,8 @@ import com.genai.tmgenai.dto.ChatHistoryResponse;
 import com.genai.tmgenai.dto.FileServiceResponse;
 import com.genai.tmgenai.dto.Question;
 import com.genai.tmgenai.service.ChatDocumentService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
@@ -42,11 +44,17 @@ public class ChatWithDocumentController {
 
     @PostMapping("chat")
     public ResponseEntity<Object> chat(@RequestBody Question question) throws URISyntaxException, IOException {
-        return ResponseEntity.ok(chatDocumentService.chat(question));
+        return ResponseEntity.ok(chatDocumentService.chatting(question));
     }
 
+
+    @PostMapping(value = "streamingChat",produces = "text/plain")
+    public ResponseEntity<Object> streamingChat(HttpServletResponse response, HttpServletRequest request, @RequestBody Question question) throws URISyntaxException, IOException {
+        return ResponseEntity.ok(chatDocumentService.chat(question,response,request));
+    }
     @GetMapping("/data")
     public ResponseEntity<List<ChatHistoryResponse>> getData(@RequestParam("fileIds") String fileId) {
         return ResponseEntity.ok(chatDocumentService.getData(fileId));
     }
+
 }
