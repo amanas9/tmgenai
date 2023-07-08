@@ -320,6 +320,21 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
 
     private List<ChatHistoryResponse> getChatHistory(List<ChatHistory> data) {
         List<ChatHistoryResponse> chatHistoryList = new ArrayList<>();
+        ChatHistoryResponse responseStarter = new ChatHistoryResponse();
+        responseStarter.setContent("⌛: Insurance Renewal Due\n" +
+                "Dear Customer,\n" +
+                "This is a reminder that your insurance renewal is upcoming.\n" +
+                "Premium Amount: Rs 25,434\n" +
+                "Expiry Date: 25th July, 2023\n" +
+                "\n" +
+                "\n" +
+                "\n" +
+                "\n" +
+                "\n");
+        responseStarter.setDateTime(LocalDateTime.parse("2022-07-08 23:38:50.068704"));
+        responseStarter.setFileId(null);
+        responseStarter.setUserType(UserEnum.BOT);
+        chatHistoryList.add(responseStarter);
         for (ChatHistory chatHistory : data){
             ChatHistoryResponse response = new ChatHistoryResponse();
             response.setContent(chatHistory.getContent());
