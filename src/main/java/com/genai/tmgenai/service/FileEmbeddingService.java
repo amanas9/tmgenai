@@ -313,7 +313,9 @@ public class FileEmbeddingService {
 
         Prompt prompt = promptTemplate.apply(variables);
 
-        AiMessage aiMessage = AiMessage.from(conversationalChain.execute(prompt.text()));
+
+
+        AiMessage aiMessage = model.sendUserMessage(prompt.text()).get();
 
         return aiMessage.text();
     }

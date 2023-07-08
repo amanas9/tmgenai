@@ -473,7 +473,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
         motorPremiumRequest.setVariant(variant);
         motorPremiumRequest.setFuel(fuelType);
         motorPremiumRequest.setRegistrationDate(motorPremiumRequest.getRegistrationDate()+year);
-        if(regNum != null && regNum.length()>=10){
+        if(regNum != null && regNum.length()>=7){
             String rto_id = regNum.substring(0, 4);
             motorPremiumRequest.setRtoId(rto_id);
             motorPremiumRequest.setUserStateCode(rto_id.substring(0, 2));

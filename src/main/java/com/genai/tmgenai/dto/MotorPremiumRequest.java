@@ -14,7 +14,7 @@ public class MotorPremiumRequest  {
 
     private int businessType=1;
 
-    private String vehicleId="435";
+    private String vehicleId="4434";
 
     private String rtoId;
 
