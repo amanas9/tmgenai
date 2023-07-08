@@ -28,7 +28,7 @@ public class AutoCompleteController {
     AutocompleteStore autocompleteStore;
 
     @GetMapping("/suggestions")
-    public ResponseEntity<Object> chat(@RequestParam String prefix, @RequestParam AutoCompleteDetails.VERTICAL vertical) throws URISyntaxException, IOException {
+    public ResponseEntity<Object> chat(@RequestParam(required = false) String prefix, @RequestParam AutoCompleteDetails.VERTICAL vertical) throws URISyntaxException, IOException {
         return ResponseEntity.ok(autocompleteStore.getAutocomplete().giveSuggestions(prefix, vertical));
     }
 
