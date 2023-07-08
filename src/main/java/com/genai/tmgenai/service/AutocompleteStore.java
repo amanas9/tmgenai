@@ -45,6 +45,15 @@ public class AutocompleteStore {
         log.error("loaded questionaries. size : {}", autocomplete.getSize());
     }
 
+    public void addQuestion(String question, AutoCompleteDetails.VERTICAL vertical, boolean suggestion)
+    {
+        if (suggestion==true) {
+            AutoCompleteDetails newQuestion = new AutoCompleteDetails(question, vertical, GENERAL);
+            autocomplete.insert(newQuestion.getQuestion(), newQuestion);
+            detailsList.add(newQuestion);
+        }
+    }
+
     private void loadDetails() {
 
         ArrayList tmpDetailsList = new ArrayList<>();

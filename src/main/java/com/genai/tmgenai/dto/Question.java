@@ -10,4 +10,5 @@ public class Question {
     private String question;
     private DocTypeEnum docType;
     private String fileId;
+    private boolean suggestion;
 }

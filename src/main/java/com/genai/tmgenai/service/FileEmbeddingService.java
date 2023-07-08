@@ -162,7 +162,7 @@ public class FileEmbeddingService {
                 .map(match -> match.embedded().get().text())
                 .collect(joining("\n\n"));
 
-        log.info("information : {}",information);
+//        log.info("information : {}",information);
 
         PromptTemplate promptTemplate = PromptTemplate.from(
                         PromptConstants.PROMPT_FOR_INITIAL_SUMMARY
@@ -189,17 +189,36 @@ public class FileEmbeddingService {
 
       //  AiMessage aiMessage = chatModel.sendUserMessage(prompt).get();
 
-        System.out.println(aiMessage.text());
+//        System.out.println("hello "+aiMessage);
         if(aiMessage.text()!=null){
             DocumentSegment documentSegment = DocumentSegment.from(aiMessage.text());
             documentSegment.metadata().add("file_id", fileId);
             Embedding embedding = embeddingModel.embed(documentSegment).get();
             pinecone.add(embedding, documentSegment);
         }
+        Map<String, String> jsonData = extractInfo(aiMessage.text());
+        System.out.println(jsonData);
+
         return aiMessage.text();
     }
 
-    private Prompt getPromptTemplateForVertical(String information ){
+    public Map<String, String> extractInfo(String text) {
+        Map<String, String> infoMap = new HashMap<>();
+
+        String[] lines = text.split("\n");
+        for (String line : lines) {
+            String[] keyValue = line.split(":");
+            if (keyValue.length == 2) {
+                String key = keyValue[0].trim().replaceFirst("^-\\s*", "");
+                String value = keyValue[1].trim();
+                infoMap.put(key, value);
+            }
+        }
+
+        return infoMap;
+    }
+
+private Prompt getPromptTemplateForVertical(String information ){
         PromptTemplate promptTemplate = PromptTemplate.from(
                 "determine the value of vertical as json key it's value by following below steps from information below delimited by triple backticks:\n"
                         + "1.determine  if the given information is about health policy or motor policy\n"
