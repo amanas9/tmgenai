@@ -24,5 +24,7 @@ public class Files {
     @Column(columnDefinition = "TEXT")
     private String presquestInfo;
     private String quotesPageUrl;
+    @Column(columnDefinition = "TEXT")
+    private String defaultAnswer;
 
 }

@@ -339,6 +339,35 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
         String questionString = question.getQuestion();
 
         questionString = questionString.toLowerCase();
+        List<String> userGreeting = Arrays.asList("hi","hello","goodmorning","good morning","goodevening","good evening","goodafternoon","good afternoon");
+        String assistantGreetingResponse = "Hello! How can I assist you today?";
+        List<String> userThanks = Arrays.asList("thank you","thanks","welcome","thank you so much","");
+        String assistantThanksResponse = "You're welcome! I'm here to help.";
+        String response = "";
+
+        // Check for greetings
+        if (userGreeting.contains(questionString.toLowerCase())){
+            response = assistantGreetingResponse;
+        }
+        // Check for thanks
+        else if (userThanks.contains(questionString.toLowerCase())) {
+            response = assistantThanksResponse;
+        }
+
+        if(!response.equalsIgnoreCase("")){
+            Answer answer1 = new Answer();
+            answer1.setAnswer(response);
+            answer1.setQuestion(question);
+            setAnswerInDB(answer1,UserEnum.BOT);
+
+            AnswerResponse answerResponse = new AnswerResponse();
+            answerResponse.setAnswer(answer1);
+            answerResponse.setFileId(question.getFileId());
+            Files file = filesRepository.findByFileId(question.getFileId());
+            answerResponse.setVertical(file.getVertical()==null?"COMMON":file.getVertical());
+            return answerResponse;
+        }
+
 
         List<String> quotesWord1 = Arrays.asList("share","get","renewal");
         List<String> quotesWord2 = Arrays.asList("quote","quotes","premium","amount","payment");

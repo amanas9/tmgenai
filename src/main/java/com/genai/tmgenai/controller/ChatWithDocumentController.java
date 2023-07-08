@@ -20,6 +20,8 @@ import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static com.genai.tmgenai.PromptConstants.WelcomeAnswer;
+
 @RestController()
 @RequestMapping("api/v1/")
 public class ChatWithDocumentController {
@@ -39,12 +41,13 @@ public class ChatWithDocumentController {
         }
       //analyze file
       Files files = chatDocumentService.embedFile(file,fileServiceResponse.getFileResponseMeta().getFileId());
-
+      files.setDefaultAnswer(WelcomeAnswer);
       return ResponseEntity.ok(files);
     }
 
     @PostMapping("chat")
     public ResponseEntity<Object> chat(@RequestBody Question question) throws URISyntaxException, IOException {
+
         return ResponseEntity.ok(chatDocumentService.chatting(question));
     }
 
