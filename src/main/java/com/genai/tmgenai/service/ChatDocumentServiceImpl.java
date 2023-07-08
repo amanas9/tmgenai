@@ -474,15 +474,17 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
         motorPremiumRequest.setFuel(fuelType);
         motorPremiumRequest.setRegistrationDate(motorPremiumRequest.getRegistrationDate()+year);
         if(regNum != null && regNum.length()>=7){
+            regNum = regNum.replace("-","");
             String rto_id = regNum.substring(0, 4);
             motorPremiumRequest.setRtoId(rto_id);
             motorPremiumRequest.setUserStateCode(rto_id.substring(0, 2));
             motorRequest.setStateCode(rto_id.substring(0, 2));
 
         }
+        motorRequest.set_id(getid());
+        motorPremiumRequest.setRequestId(motorRequest.get_id());
 
-
-
+        motorPremiumRequest.setVehicleId(getVehicleIdMap().get(regNum));
 
         motorRequest.setMotorPremiumRequest(motorPremiumRequest);
         try {
@@ -517,6 +519,26 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
         headers.set(HEADER_X_BROKER, TURTLEMINT);
         headers.set(HEADER_X_TENANT, TURTLEMINT);
         return headers;
+    }
+
+    private Map<String,String> getVehicleIdMap(){
+        Map<String,String> mp = new HashMap<>();
+        mp.put("MH01BF4139","4435");
+        mp.put("KA-13-EL-1800","7480");
+        mp.put("KA13EL1800","7480");
+        mp.put("WB86A2200","4434");
+        mp.put("MH02BR1368","942");
+        mp.put("PB13BN7300","7781");
+
+        return mp;
+
+
+    }
+    private String getid(){
+        Random random = new Random();
+        int randomNumber = random.nextInt(1001) + 1000;
+        String id = "ABCD" + String.valueOf(randomNumber);
+        return id;
     }
 
 }

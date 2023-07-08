@@ -8,8 +8,7 @@ import com.genai.tmgenai.service.AutocompleteStore;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import lombok.Data;
-import org.json.JSONArray;
-import org.json.JSONObject;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;

@@ -1,5 +1,6 @@
 package com.genai.tmgenai.models;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import lombok.Data;
@@ -18,7 +19,9 @@ public class Files {
     private String identifier;
     private String vertical;
 
+    @Column(columnDefinition = "TEXT")
     private String summary;
+    @Column(columnDefinition = "TEXT")
     private String presquestInfo;
     private String quotesPageUrl;
 
