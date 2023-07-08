@@ -12,7 +12,7 @@ public class AutoCompleteDetails {
         GENERAL, RENEWAL, CLAIM;
     }
     public enum VERTICAL{
-        FW, TW, CV, HEALTH, LIFE
+        FW, TW, CV, HEALTH, LIFE, COMMON
     };
 
     String question;

@@ -58,15 +58,16 @@ public class AutocompleteStore {
 
         ArrayList tmpDetailsList = new ArrayList<>();
 
-        tmpDetailsList.add(new AutoCompleteDetails("What is the registration number?", FW, GENERAL));
-        tmpDetailsList.add(new AutoCompleteDetails("how to submit claim?", FW, GENERAL));
-        tmpDetailsList.add(new AutoCompleteDetails("how to claim?", FW, GENERAL));
-        tmpDetailsList.add(new AutoCompleteDetails("give me benefits.", FW, GENERAL));
-        tmpDetailsList.add(new AutoCompleteDetails("What are terms & condition.", FW, GENERAL));
-        tmpDetailsList.add(new AutoCompleteDetails("What is expiry date?", FW, GENERAL));
-        tmpDetailsList.add(new AutoCompleteDetails("explain tax benefits.", LIFE, GENERAL));
-        tmpDetailsList.add(new AutoCompleteDetails("what is cover amount", LIFE, GENERAL));
-
+        detailsList.add(new AutoCompleteDetails("My premium is too high, can I get cheaper quotes?",FW,GENERAL));
+        detailsList.add(new AutoCompleteDetails("What does NCB mean?",FW,GENERAL));
+        detailsList.add(new AutoCompleteDetails("Why should I renew my policy?",HEALTH,GENERAL));
+        detailsList.add(new AutoCompleteDetails("How much will I get on a policy claim?",HEALTH,GENERAL));
+        detailsList.add(new AutoCompleteDetails("Why should I renew my policy?",COMMON,GENERAL));
+        detailsList.add(new AutoCompleteDetails("How much will I get on a policy claim?",COMMON,GENERAL));
+        detailsList.add(new AutoCompleteDetails("My premium is too high, can I get cheaper quotes?",TW,GENERAL));
+        detailsList.add(new AutoCompleteDetails("What does NCB mean?",TW,GENERAL));
+        detailsList.add(new AutoCompleteDetails("My premium is too high, can I get cheaper quotes?",CV,GENERAL));
+        detailsList.add(new AutoCompleteDetails("What does NCB mean?",CV,GENERAL));
         this.detailsList = tmpDetailsList;
     }
     public List<AutoCompleteDetails> getDetailsList() {
