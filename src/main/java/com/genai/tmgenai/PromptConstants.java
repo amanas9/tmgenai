@@ -39,14 +39,15 @@ public class PromptConstants {
             "Based on the below information, determine value of fuel, make, model, variant, manufacturing year(give in YYYY format) and registration number. Return the output as a json object with the keys fuel,make,model,variant,year,registration_number.\n";
 
 
-    public static final String WelcomeAnswer =":loudspeaker: Introducing our New \"Request Quotes on Whatsapp\" Feature!\n" +
+    public static final String WelcomeAnswer ="\uD83D\uDCE2 Introducing \"Request a Quote on Whatsapp\" Feature! \uD83D\uDCB0\n" +
+            "\n" +
             "Dear Insurance Advisor,\n" +
             "Simply upload the policy copy here and we will provide you quotes right here on whatsapp.\n" +
-            "Benefits of the \"Request a Quote\" Feature:\n" +
-            ":white_check_mark: Eliminate Manual Entry\n" +
-            ":white_check_mark: Time-saving\n" +
-            ":white_check_mark: Accurate Quotes\n" +
-            "Thank you for being part of our trusted network of Insurance Advisors.\n" +
+            "\n" +
+            "✅ Eliminate Manual Entry\n✅ Time-saving\n✅ Accurate Quotes\n" +
+            "\n" +
+            "Thank you for being part of our trusted network of Insurance Advisors. \n" +
+            "\n" +
             "Best regards,\n" +
             "Turtlemint Pro";
 }
