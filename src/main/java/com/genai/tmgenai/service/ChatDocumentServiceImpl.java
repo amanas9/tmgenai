@@ -370,7 +370,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
             String resulturl =  createPremiumRequest(question);
             if(resulturl != null){
                 Answer answer = new Answer();
-                answer.setAnswer(resulturl);
+                answer.setAnswer("Please find quotes here: " +  resulturl);
                 answer.setQuestion(question);
                 AnswerResponse answerResponse = new AnswerResponse();
                 answerResponse.setAnswer(answer);
