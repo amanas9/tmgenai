@@ -10,13 +10,21 @@ import dev.langchain4j.chain.ConversationalChain;
 import dev.langchain4j.data.document.DocumentSegment;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.model.StreamingResultHandler;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.input.Prompt;
 import dev.langchain4j.model.input.PromptTemplate;
+import dev.langchain4j.model.language.StreamingLanguageModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
+import dev.langchain4j.model.openai.OpenAiStreamingLanguageModel;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
+import dev.langchain4j.store.embedding.PineconeEmbeddingStore;
+import jakarta.servlet.AsyncContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,9 +34,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.http.HttpResponse;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.util.*;
+
 
 import static dev.langchain4j.model.openai.OpenAiModelName.*;
 import static java.time.Duration.ofSeconds;
@@ -116,6 +133,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
 
         List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 5,filter);
 
+
         // Create a prompt for the model that includes question and relevant embeddings
 
         PromptTemplate promptTemplate = PromptTemplate.from(
@@ -158,6 +176,95 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
     }
 
     @Override
+    public Answer chat(Question question, HttpServletResponse response, HttpServletRequest request) throws URISyntaxException, IOException {
+        EmbeddingModel embeddingModel = OpenAiEmbeddingModel.builder()
+                .apiKey(OPENAI_API_KEY) // https://platform.openai.com/account/api-keys
+                .modelName(TEXT_EMBEDDING_ADA_002)
+                .timeout(ofSeconds(15))
+                .build();
+
+        PineConeEmbeddingstoreCustomImpl pinecone = new PineConeEmbeddingstoreCustomImpl("1d0899b3-7abf-40be-a267-ac208d572ed3", "asia-southeast1-gcp-free", "bca6a53", "documents", "default");
+
+
+
+        String questionString = question.getQuestion();
+
+        Embedding questionEmbedding = embeddingModel.embed(questionString).get();
+
+
+        Struct filter = Struct.newBuilder().putFields("file_id", com.google.protobuf.Value.newBuilder().setStringValue(question.getFileId()).build()).build();
+
+
+
+        // Find relevant embeddings in embedding store by semantic similarity
+
+        List<EmbeddingMatch<DocumentSegment>> relevantEmbeddings = pinecone.findRelevant(questionEmbedding, 5,filter);
+
+
+
+
+        // Create a prompt for the model that includes question and relevant embeddings
+
+        PromptTemplate promptTemplate = PromptTemplate.from(
+                "Answer the following question to the best of your ability :\n"
+                        + "\n"
+                        + "Question:\n"
+                        + "{{questionString}}\n"
+                        + "\n"
+                        + "Base your answer on the below information from a policy document: \n"
+                        + "{{information}}");
+
+        String information = relevantEmbeddings.stream()
+                .map(match -> match.embedded().get().text())
+                .collect(joining("\n\n"));
+
+        log.info("information : {}",information);
+
+
+
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("questionString", question);
+        variables.put("information", information);
+
+        Prompt prompt = promptTemplate.apply(variables);
+
+
+        // Send prompt to the model
+
+        StreamingLanguageModel model = OpenAiStreamingLanguageModel.withApiKey(OPENAI_API_KEY);
+
+//        final AsyncContext asyncContext = request.startAsync();
+//        final PrintWriter writer = response.getWriter();
+//        response.setContentType("text/plain; charset=utf-8");
+
+        model.process(prompt, new StreamingResultHandler() {
+
+            @SneakyThrows
+            @Override
+            public void onPartialResult(String partialResult) {
+                System.out.println(partialResult);
+             //   writer.write(partialResult);
+               //writer.flush();
+            }
+
+            @Override
+            public void onComplete() {
+//                writer.close();
+//                asyncContext.complete();
+            }
+
+            @Override
+            public void onError(Throwable error) {
+               // asyncContext.complete();
+            }
+        });
+
+
+        // See an answer from the model
+
+
+        return null;
+    }
     public void setQuestionInDB(Question question, UserEnum userEnum) {
         ChatHistory chatHistory = new ChatHistory();
         chatHistory.setCreatedAt(LocalDateTime.now());
@@ -196,6 +303,7 @@ public class ChatDocumentServiceImpl implements ChatDocumentService{
             chatHistoryList.add(response);
         }
         return chatHistoryList;
+
     }
 
 }
